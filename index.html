@@ -31,24 +31,17 @@
   var map = L.map('map').setView([21.75, -72.28], 12);
 
   // 2️⃣ Add a basemap layer (clean style)
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, etc.',
-  maxZoom: 20
-}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, etc.',
+    maxZoom: 20
+  }).addTo(map);
 
   // 3️⃣ YOUR GEOJSON DATA GOES HERE
-  // Replace the empty features array with your GeoJSON features
   var geojsonData = {
-    "type": "FeatureCollection",
-    "features": [
+  "type": "FeatureCollection",
+  "features": [
     {
       "type": "Feature",
-      "properties": {
-        "name": "Area 1",
-        "description": "Description for Area 1",
-        "color": "#ff0000"
-      },
-    "type": "Feature",
       "geometry": {
         "type": "Polygon",
         "coordinates": [
@@ -13344,27 +13337,84 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/
         "SHAPE_LENG": 237223,
         "SHAPE_AREA": "5.86301e+08"
       }
-    
     }
   ]
-};
+  };
 
-  // 4️⃣ Style and add polygons to the map
-  L.geoJSON(geojsonData, {
+// 4️⃣ Style and add polygons to the map
+  var geojsonLayer = L.geoJSON(geojsonData, {
     style: function(feature) {
       return {
-        color: feature.properties.color || "#3266a8", // fallback color
+        color: feature.properties.color || "#3266a8", 
+        fillColor: feature.properties.color || "#3266a8",
         fillOpacity: 0.3,
         weight: 2
       };
     },
     onEachFeature: function(feature, layer) {
-      // Add popup with name if exists
-      if (feature.properties && feature.properties.name) {
-        layer.bindPopup(feature.properties.name);
+      
+      // --- HOVER EFFECT ---
+      layer.on({
+        mouseover: function(e) {
+          var target = e.target;
+          target.setStyle({
+            fillOpacity: 0.7,
+            weight: 3,
+            color: "#ffcc00" // Highlight color on hover
+          });
+          target.bringToFront();
+        },
+        mouseout: function(e) {
+          geojsonLayer.resetStyle(e.target);
+        }
+      });
+
+      // --- SIMPLE POPUP (Name Only) ---
+      if (feature.properties) {
+        // Checks for 'Name' or 'name' to be safe
+        var parkName = feature.properties.Name || feature.properties.name || "Unnamed Area";
+        layer.bindPopup("<strong>" + parkName + "</strong>");
       }
     }
   }).addTo(map);
+
+  // 5️⃣ Require Cmd/Ctrl to Pan the Map & Show Warning
+  
+  map.dragging.disable();
+  if (map.tap) map.tap.disable(); 
+
+  // Create the warning message element
+  var warningDiv = document.createElement('div');
+  warningDiv.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.8); color: white; padding: 12px 20px; border-radius: 5px; font-family: sans-serif; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.3s;';
+  warningDiv.innerHTML = 'Use <b>Cmd</b> or <b>Ctrl</b> + Drag to move the map';
+  document.getElementById('map').appendChild(warningDiv);
+
+  var warningTimeout;
+  var isMouseDown = false;
+
+  map.on('mousedown', function() { isMouseDown = true; });
+  map.on('mouseup mouseout', function() { isMouseDown = false; });
+
+  map.on('mousemove', function() {
+    if (isMouseDown && !map.dragging.enabled()) {
+      warningDiv.style.opacity = '1';
+      clearTimeout(warningTimeout);
+      warningTimeout = setTimeout(function() { warningDiv.style.opacity = '0'; }, 1500);
+    }
+  });
+
+  window.addEventListener('keydown', function(e) {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      map.dragging.enable();
+      warningDiv.style.opacity = '0';
+    }
+  });
+
+  window.addEventListener('keyup', function(e) {
+    if (e.key === 'Control' || e.key === 'Meta') {
+      map.dragging.disable();
+    }
+  });
 </script>
 
 </body>
