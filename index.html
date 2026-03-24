@@ -1532,8 +1532,8 @@
       "properties": {
         "felt:feature": 4,
         "id": null,
-        "Name": "Pigeon Pond and Frenchman?s Creek Nature Reserve",
-        "description": "<br><br>OBJECTID: 4<br>FEATURE: NR19<br>AREA_DESC: Pigeon Pond and Frenchman?s Creek Nature Reserve<br>AREA_SQR_M: 2.40969e+07<br>AREA_ACRES: 5954.35<br>AREA_SQ_MI: 9.3<br>AREA_LEGAL: 5910<br>ZONE_: 18<br>NOTE: <br>SHAPE_LENG: 31764.7<br>SHAPE_AREA: 2.40969e+07",
+        "Name": "Pigeon Pond and Frenchman's Creek Nature Reserve",
+        "description": "<br><br>OBJECTID: 4<br>FEATURE: NR19<br>AREA_DESC: Pigeon Pond and Frenchmans Creek Nature Reserve<br>AREA_SQR_M: 2.40969e+07<br>AREA_ACRES: 5954.35<br>AREA_SQ_MI: 9.3<br>AREA_LEGAL: 5910<br>ZONE_: 18<br>NOTE: <br>SHAPE_LENG: 31764.7<br>SHAPE_AREA: 2.40969e+07",
         "timestamp": null,
         "begin": null,
         "end": null,
@@ -1545,7 +1545,7 @@
         "icon": null,
         "OBJECTID": 4,
         "FEATURE": "NR19",
-        "AREA_DESC": "Pigeon Pond and Frenchman?s Creek Nature Reserve",
+        "AREA_DESC": "Pigeon Pond and Frenchman's Creek Nature Reserve",
         "AREA_SQR_M": "2.40969e+07",
         "AREA_ACRES": 5954.35,
         "AREA_SQ_MI": 9.3,
@@ -1642,6 +1642,7 @@
         ]
       },
       "properties": {
+
         "felt:feature": 5,
         "id": null,
         "Name": "Princess Alexandra Nature Reserve",
@@ -8100,8 +8101,8 @@
       "properties": {
         "felt:feature": 23,
         "id": null,
-        "Name": "Vine Point (Man O? War Bush) and Ocean Hole Nature Reserve",
-        "description": "<br><br>OBJECTID_1: 23<br>OBJECTID: 23<br>FEATURE: NR22<br>AREA_DESC: Vine Point (Man O? War Bush) and Ocean Hole Nature Reserve<br>AREA_SQR_M: 7.25521e+06<br>AREA_ACRES: 1792.76<br>AREA_SQ_MI: 2.8<br>AREA_LEGAL: 1870<br>ZONE_: 19<br>NOTE: <br>SHAPE_LENG: 14320.7<br>SHAPE_AREA: 7.25521e+06",
+        "Name": "Vine Point (Man O War Bush) and Ocean Hole Nature Reserve",
+        "description": "<br><br>OBJECTID_1: 23<br>OBJECTID: 23<br>FEATURE: NR22<br>AREA_DESC: Vine Point (Man O War Bush) and Ocean Hole Nature Reserve<br>AREA_SQR_M: 7.25521e+06<br>AREA_ACRES: 1792.76<br>AREA_SQ_MI: 2.8<br>AREA_LEGAL: 1870<br>ZONE_: 19<br>NOTE: <br>SHAPE_LENG: 14320.7<br>SHAPE_AREA: 7.25521e+06",
         "timestamp": null,
         "begin": null,
         "end": null,
@@ -8114,7 +8115,7 @@
         "OBJECTID_1": 23,
         "OBJECTID": 23,
         "FEATURE": "NR22",
-        "AREA_DESC": "Vine Point (Man O? War Bush) and Ocean Hole Nature Reserve",
+        "AREA_DESC": "Vine Point (Man O War Bush) and Ocean Hole Nature Reserve",
         "AREA_SQR_M": "7.25521e+06",
         "AREA_ACRES": 1792.76,
         "AREA_SQ_MI": 2.8,
@@ -13341,7 +13342,20 @@
   ]
   };
 
-// 4️⃣ Style and add polygons to the map
+// This is a "ghost" layer that only exists to show the white selection box
+  var highlightLayer = L.geoJSON(null, {
+    style: {
+      color: "#ffffff", // Bright white
+      weight: 3,
+      fillOpacity: 0.3,
+      fillColor: "#ffffff",
+      interactive: false // CRITICAL: This makes the highlight "invisible" to clicks
+    }
+  }).addTo(map);
+
+  var selectedLayer = null;
+
+  // 4️⃣ Style and add polygons to the map
   var geojsonLayer = L.geoJSON(geojsonData, {
     style: function(feature) {
       return {
@@ -13352,49 +13366,63 @@
       };
     },
     onEachFeature: function(feature, layer) {
-      
-      // --- HOVER EFFECT ---
+      var parkName = feature.properties.Name || feature.properties.name || "Unnamed Area";
+      layer.bindPopup("<strong>" + parkName + "</strong>");
+
       layer.on({
         mouseover: function(e) {
-          var target = e.target;
-          target.setStyle({
-            fillOpacity: 0.7,
-            weight: 3,
-            color: "#ffcc00" // Highlight color on hover
-          });
-          target.bringToFront();
+          // Standard gold highlight on hover
+          e.target.setStyle({ fillOpacity: 0.6, weight: 3, color: "#ffcc00" });
         },
         mouseout: function(e) {
           geojsonLayer.resetStyle(e.target);
+        },
+        click: function(e) {
+          // 1. Clear the "ghost" highlight first
+          highlightLayer.clearLayers();
+
+          // 2. Add the clicked shape to the "ghost" highlight layer
+          // This makes it look like it's on top without moving the actual layer
+          highlightLayer.addData(feature);
+          highlightLayer.bringToFront();
+
+          // 3. THE SWAP: Move the ACTUAL layer to the back
+          // Because the white highlight is "pointerEvents: none", the NEXT click 
+          // will go right through the white box and hit the layer underneath.
+          e.target.bringToBack();
+
+          // 4. Open the name
+          e.target.openPopup();
+
+          L.DomEvent.stopPropagation(e);
         }
       });
-
-      // --- SIMPLE POPUP (Name Only) ---
-      if (feature.properties) {
-        // Checks for 'Name' or 'name' to be safe
-        var parkName = feature.properties.Name || feature.properties.name || "Unnamed Area";
-        layer.bindPopup("<strong>" + parkName + "</strong>");
-      }
     }
   }).addTo(map);
 
-  // 5️⃣ Require Cmd/Ctrl to Pan the Map & Show Warning
-  
+  // Clear highlight when clicking map background
+  map.on('click', function() {
+    highlightLayer.clearLayers();
+  });
+
+// 5️⃣ Require Cmd/Ctrl to Pan the Map & Show Warning
   map.dragging.disable();
   if (map.tap) map.tap.disable(); 
 
   // Create the warning message element
   var warningDiv = document.createElement('div');
   warningDiv.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.8); color: white; padding: 12px 20px; border-radius: 5px; font-family: sans-serif; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.3s;';
-  warningDiv.innerHTML = 'Use <b>Cmd</b> or <b>Ctrl</b> + Drag to move the map';
+  warningDiv.innerHTML = 'Hold <b>Cmd</b> or <b>Ctrl</b> to move the map';
   document.getElementById('map').appendChild(warningDiv);
 
   var warningTimeout;
   var isMouseDown = false;
 
+  // Track if mouse is currently held down
   map.on('mousedown', function() { isMouseDown = true; });
   map.on('mouseup mouseout', function() { isMouseDown = false; });
 
+  // Show warning ONLY if they try to drag without the key
   map.on('mousemove', function() {
     if (isMouseDown && !map.dragging.enabled()) {
       warningDiv.style.opacity = '1';
@@ -13403,6 +13431,7 @@
     }
   });
 
+  // Turn dragging ON when key is pressed
   window.addEventListener('keydown', function(e) {
     if (e.key === 'Control' || e.key === 'Meta') {
       map.dragging.enable();
@@ -13410,11 +13439,13 @@
     }
   });
 
+  // Turn dragging OFF when key is released
   window.addEventListener('keyup', function(e) {
     if (e.key === 'Control' || e.key === 'Meta') {
       map.dragging.disable();
     }
   });
+
 </script>
 
 </body>
